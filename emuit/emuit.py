@@ -28,6 +28,8 @@ class EmuIt(object):
         self._insn_limit_hit = False
         self._fallback_pages = 0
         self._fallback_limit_hit = False
+        self._write_sources: dict[int, int] = {}
+        self._hooked_engine = None
         self._log = create_logger(self)
         self.reset()
 
@@ -111,7 +113,7 @@ class EmuIt(object):
         else:
             source = self.arch.regs.arch_pc
 
-        user_data.update({address + offset: source for offset in range(0, size)})
+        self._write_sources.update({address + offset: source for offset in range(0, size)})
 
     def _hook_mem_write_unmapped(self, uc, access, address, size, value, user_data):
         if not self._map_fallback_page(address):
@@ -170,18 +172,8 @@ class EmuIt(object):
         self._fallback_pages = 0
         self._fallback_limit_hit = False
 
-        user_data: dict[int, int] = {}
-        self.arch.engine.hook_add(uc.UC_HOOK_MEM_WRITE, self._hook_mem_write, user_data)
-        self.arch.engine.hook_add(
-            uc.UC_HOOK_MEM_WRITE_UNMAPPED, self._hook_mem_write_unmapped, user_data
-        )
-        self.arch.engine.hook_add(
-            uc.UC_HOOK_MEM_READ_UNMAPPED, self._hook_mem_read_unmapped
-        )
-        self.arch.engine.hook_add(
-            uc.UC_HOOK_MEM_FETCH_UNMAPPED, self._hook_mem_fetch_unmapped
-        )
-        self.arch.engine.hook_add(uc.UC_HOOK_CODE, self._hook_code)
+        self._write_sources = {}
+        self._add_hooks()
 
         for _ in range(self.RUN_ATTEMPTS):
             try:
@@ -203,7 +195,23 @@ class EmuIt(object):
                 f'(limit per run, at PC 0x{self.arch.regs.arch_pc:0X})'
             )
 
-        return self._post_processing(user_data)
+        return self._post_processing(self._write_sources)
+
+    def _add_hooks(self):
+        # Once per Unicorn engine (reset() creates a new one). Adding them on
+        # every run() stacks them: each earlier run's hooks fire again, e.g.
+        # counting every instruction once per run so far. Deleting them after
+        # a run instead isn't safe: Unicorn's translated code can still call
+        # a deleted hook, which crashes once Python frees its callback.
+        engine = self.arch.engine
+        if self._hooked_engine is engine:
+            return
+        engine.hook_add(uc.UC_HOOK_MEM_WRITE, self._hook_mem_write)
+        engine.hook_add(uc.UC_HOOK_MEM_WRITE_UNMAPPED, self._hook_mem_write_unmapped)
+        engine.hook_add(uc.UC_HOOK_MEM_READ_UNMAPPED, self._hook_mem_read_unmapped)
+        engine.hook_add(uc.UC_HOOK_MEM_FETCH_UNMAPPED, self._hook_mem_fetch_unmapped)
+        engine.hook_add(uc.UC_HOOK_CODE, self._hook_code)
+        self._hooked_engine = engine
 
     def _post_processing(self, entries: dict[int, int]) -> list[Buffer]:
         # The write hook records a write before Unicorn checks the address, so
