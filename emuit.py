@@ -107,14 +107,25 @@ class EmuItPlugin(idaapi.plugin_t):
         buffers = self.emu.run(start_ea, end_ea)
 
         if self.show_comments:
-            candidates = filter(lambda x: x.metric_decodable() > 0.6, buffers)
+            # a buffer without a known write instruction has nowhere to be commented
+            candidates = filter(
+                lambda x: x.write_instruction_ea is not None and x.metric_decodable() > 0.6,
+                buffers,
+            )
             for candidate in candidates:
+                text = candidate.try_decode()
+                if not text:
+                    continue  # an empty comment would delete the existing one
+                if len(text) > self.MAX_COMMENT_LENGTH:
+                    text = text[:self.MAX_COMMENT_LENGTH - 3] + '...'
                 self.emu.log.info(f'add comment to 0x{candidate.write_instruction_ea:0X}')
-                IdaCommentUtils.add_comment(candidate.write_instruction_ea, candidate.try_decode())
+                IdaCommentUtils.add_comment(candidate.write_instruction_ea, text)
             IdaUiUtils.refresh_current_viewer()
 
         for buffer in buffers:
-            self.emu.log.info(f'(PC:0x{buffer.write_instruction_ea:0X}) 0x{buffer.ea:0X}: {buffer}')
+            pc = buffer.write_instruction_ea
+            pc = '?' if pc is None else f'0x{pc:0X}'
+            self.emu.log.info(f'(PC:{pc}) 0x{buffer.ea:0X}: {buffer}')
 
         self.emu.log.info('finish')
 
