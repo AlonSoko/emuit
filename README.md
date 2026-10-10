@@ -1,5 +1,13 @@
 ## EmuIt - easy-to-use IDA emulator plugin
 
+> **About this fork:** it is [AzzOnFire/emuit](https://github.com/AzzOnFire/emuit) with these fixes merged, which are submitted upstream but not merged there yet:
+> - [#1](https://github.com/AzzOnFire/emuit/pull/1) (by [@Maple38](https://github.com/Maple38)): ARM handling and architecture detection
+> - [#2](https://github.com/AzzOnFire/emuit/pull/2): memory mapping fixes (emulated data was lost or zeroed, e.g. in `.bss`), and limits on runaway emulation
+> - [#3](https://github.com/AzzOnFire/emuit/pull/3): "Emulate all function calls" works (it failed in IDA 9.4), with results commented at each call site
+> - [#4](https://github.com/AzzOnFire/emuit/pull/4): `Buffer` fixes (per-byte debug output, crashes, slow decoding, UTF-16 detection)
+>
+> Install it as described under [Installation](#installation), using this repository's files. The rest of this README is upstream's.
+
 ### Features
 - Emulate selected chunk of code and see decrypted/assembled strings
 - Automatic memory allocation in case of incorrect write operations, stack unwinding and other techniques to improve emulation stability 
