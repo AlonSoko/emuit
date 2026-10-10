@@ -36,6 +36,10 @@ class EmuItPlugin(idaapi.plugin_t):
     wanted_name = PLUGIN_NAME
     wanted_hotkey = ''
 
+    # Longer results are cut in comments: IDA keeps only 1024 characters of a
+    # disassembly comment, and a pseudocode comment is shown as one line.
+    MAX_COMMENT_LENGTH = 1024
+
     def banner(self):
         print('=' * 52, '\n', ' ' * 52)
         print(r'  ______     __    __     __  __     __     ______  ')
@@ -183,8 +187,11 @@ class EmuItPlugin(idaapi.plugin_t):
             if text:
                 decoded.append(text)
         if decoded:
+            text = ' | '.join(decoded)
+            if len(text) > self.MAX_COMMENT_LENGTH:
+                text = text[:self.MAX_COMMENT_LENGTH - 3] + '...'
             self.emu.log.info(f'add comment to 0x{call_ea:0X}')
-            self._comment_call_site(call_ea, ' | '.join(decoded))
+            self._comment_call_site(call_ea, text)
 
     def _comment_call_site(self, call_ea, text):
         # Call sites often carry the analyst's own comments: add the result
