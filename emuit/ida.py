@@ -169,11 +169,9 @@ class EmuItIda(EmuIt):
 
     def _hook_mem_write_unmapped(self, uc, access, address, size, value, user_data):
         self.log.warning(f"unmapped write to 0x{address:0X}")
-        if not self._map_from_ida(address):
-            # map just the page holding the address: an unaligned
-            # map(address, 0x1000) spans two pages, and could blank out
-            # the next page before its segment data is loaded
-            self.mem.map(address & ~0xFFF, 0x1000)
+        # outside the database: a blank page, within the per-run limit
+        if not self._map_from_ida(address) and not self._map_fallback_page(address):
+            return False
 
         self._hook_mem_write(uc, access, address, size, value, user_data)
         return True
