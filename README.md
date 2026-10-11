@@ -5,6 +5,7 @@
 > - [#2](https://github.com/AzzOnFire/emuit/pull/2): memory mapping fixes (emulated data was lost or zeroed, e.g. in `.bss`), and limits on runaway emulation
 > - [#3](https://github.com/AzzOnFire/emuit/pull/3): "Emulate all function calls" works (it failed in IDA 9.4), with results commented at each call site
 > - [#4](https://github.com/AzzOnFire/emuit/pull/4): `Buffer` fixes (per-byte debug output, crashes, slow decoding, UTF-16 detection)
+> - [#5](https://github.com/AzzOnFire/emuit/pull/5): IDA no longer crashes when it quits (unicorn closed its engines during Python's shutdown)
 >
 > Install it as described under [Installation](#installation), using this repository's files. The rest of this README is upstream's.
 
